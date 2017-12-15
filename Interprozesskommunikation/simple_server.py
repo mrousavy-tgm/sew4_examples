@@ -1,49 +1,72 @@
 import socket
+import SocketRunningException
+
+# Preprocessor vars
+BUFFER_SIZE = 1024
 
 class SimpleServer(object):
     """
     Stellt einen simplen Server dar, welcher auf eingehende Verbindungen wartet.
     """
-    def __init__(self, port):
+    def __init__(self, port = 5555, callback = None):
         """
         Speichert den Port, auf welchen gehorcht werden soll.
-        :param port: Port, auf den der Server horchen wird
+        :param port: The Server's port to listen to
+        :param callback: The callback lambda to execute on message received
         """
+        if not isinstance(port, int):
+            raise TypeError
         self.port = port
+        self.callback = callback
+        self.clients = dict(socket.socket)# -> socket.socket
+        try:
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        except socket.error as error:
+            print("Socket error: " + str(e))
 
-    def bind_and_listen(self):
-        # eine TCP Connection (Stream) über host und port erstellen
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serversocket:
-            # Binding erstellen und auf localhost am angegebenen Port horchen
-            serversocket.bind(('localhost', self.port))
-            # Eingehende Verbindungen ab jetzt annehmen (mit maximal 5 pending connections)
-            serversocket.listen(5)
-            try:
-                while True:
-                    print("Auf client warten...")
-                    # Blockierender Aufruf! Client wird empfangen (Gegenpart: connect() )
-                    (clientsocket, address) = serversocket.accept()
-                    print("Client verbunden! Warte auf Nachricht...")
-                    while True:
-                        # Nachricht empfangen
-                        data = clientsocket.recv(1024).decode()
-                        if not data:
-                            # Schließen, falls Verbindung geschlossen wurde
-                            clientsocket.close()
-                            break
-                        print("Client: %s" % data)
-                        if data == "exit":
-                            # Bei "Exit" Verbindung schließen
-                            clientsocket.send("Bye!".encode())
-                            clientsocket.close()
-                            break
-                        else:
-                            msg = input("Antwort an Client: ")
-                            # Antwort senden
-                            clientsocket.send(msg.encode())
-            except socket.error as serr:
-                print("Socket closed.")
+    def __del__(self):
+        self.socket.close()
+
+    def stop(self):
+        for client in self.clients:
+            self.socket.close()
+
+    def start(self):
+        """
+        Bind and Start the server socket
+        """
+        if self.running:
+            raise SocketRunningException
+        self.socket.bind(('localhost', self.port))
+        serversocket.listen(5)
+
+    def listen(self):
+        """
+        Begin the listen queue/loop and listen for clients
+        (this function is blocking)
+        """
+        while True:
+            (client, address) = self.socket.accept()
+            self.clients[address] = client  # Add client to dict
+
+
+    def handle_client(self, address, client: socket.socket):
+        if not isinstance(address, int):    # TODO: ?
+            raise TypeError
+        if not isinstance(client, socket.socket):
+            raise TypeError
+        message = client.recv(BUFFER_SIZE).decode()
+        if not message:
+            # TODO:
+            raise Exception
+
+    def send(self, address, message: str):
+        pass
+
+    def broadcast(self, message: str):
+        pass
 
 if __name__ == "__main__":
     server = SimpleServer(50000)
-    server.bind_and_listen()
+    server.start()
+    server.listen()
